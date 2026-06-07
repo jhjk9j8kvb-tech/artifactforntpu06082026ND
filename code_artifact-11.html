@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>零時行動：臺灣全民安全生存指引互動推演</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&family=Share+Tech+Mono&display=swap');
+
+        :root {
+            --rescue-orange: #ff6b00;
+            --rescue-orange-dim: rgba(255, 107, 0, 0.15);
+            --tactical-dark: #121212;
+            --tactical-panel: #1e1e1e;
+            --alert-red: #ef4444;
+            --safe-green: #10b981;
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --mono-font: 'Share Tech Mono', monospace;
+        }
+
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: var(--tactical-dark);
+            color: var(--text-main);
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background-image: 
+                radial-gradient(circle at top right, rgba(255, 107, 0, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at bottom left, rgba(16, 185, 129, 0.05) 0%, transparent 50%);
+        }
+
+        .damage-shake {
+            animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+            box-shadow: inset 0 0 80px rgba(239, 68, 68, 0.6);
+        }
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-2px, 0, 0); }
+            20%, 80% { transform: translate3d(4px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-6px, 0, 0); }
+            40%, 60% { transform: translate3d(6px, 0, 0); }
+        }
+
+        .tactical-panel {
+            background: var(--tactical-panel);
+            border: 1px solid #333;
+            border-top: 5px solid var(--rescue-orange);
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .btn-tactical {
+            background: #2a2a2a;
+            color: var(--text-main);
+            border: 2px solid #444;
+            border-radius: 6px;
+            font-weight: bold;
+            transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            cursor: pointer;
+        }
+        .btn-tactical:hover:not(:disabled) {
+            background: var(--rescue-orange);
+            color: #000;
+            border-color: var(--rescue-orange);
+            box-shadow: 0 0 20px var(--rescue-orange-dim);
+        }
+        .btn-tactical:disabled { opacity: 0.5; cursor: not-allowed; border-color: #333; }
+
+        .hp-bar { height: 16px; background: #222; border-radius: 8px; overflow: hidden; border: 2px solid #444; }
+        .hp-fill { height: 100%; width: 100%; background: var(--safe-green); transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1), background 0.4s; }
+
+        #custom-modal { display: none; }
+        #custom-modal.active { display: flex; }
+
+        .item-card {
+            background: #262626; border: 2px solid #444; border-radius: 8px; padding: 1.5rem 1rem;
+            cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; text-align: center;
+        }
+        .item-card:hover { border-color: var(--rescue-orange); background: #333; transform: translateY(-3px); }
+        .item-card.selected { border-color: var(--safe-green); background: rgba(16, 185, 129, 0.15); box-shadow: 0 0 15px rgba(16, 185, 129, 0.2); }
+        .item-icon { font-size: 3rem; margin-bottom: 0.5rem; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); }
+
+        .building-container { display: flex; flex-direction: column; gap: 0.5rem; max-width: 600px; margin: 0 auto; }
+        .floor-zone {
+            background: #262626; border: 3px solid #444; border-radius: 8px; padding: 1.5rem;
+            cursor: pointer; transition: all 0.3s; display: flex; align-items: center; gap: 1.5rem;
+        }
+        .floor-zone:hover { background: #333; border-color: var(--rescue-orange); transform: translateX(5px); }
+        .floor-icon { font-size: 2.5rem; width: 60px; text-align: center; }
+        .shelter-sign {
+            display: inline-block; background: #fbbf24; color: #000; font-weight: 900; 
+            padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem; margin-top: 0.5rem; border: 2px solid #000; box-shadow: 2px 2px 0px #000;
+        }
+
+        .seq-row {
+            background: #262626; border: 2px solid #444; padding: 1.2rem; margin-bottom: 0.75rem;
+            border-radius: 8px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center;
+        }
+        .seq-row:hover { border-color: var(--rescue-orange); transform: translateX(5px); }
+        .seq-num { 
+            width: 40px; height: 40px; background: #111; border: 2px solid #666; border-radius: 50%; 
+            display: flex; align-items: center; justify-content: center; font-size: 1.2rem; font-weight: 900; margin-right: 1.5rem; color: #fff; 
+        }
+        .seq-row.selected { border-color: var(--safe-green); background: rgba(16, 185, 129, 0.1); }
+        .seq-row.selected .seq-num { background: var(--safe-green); border-color: var(--safe-green); color: #000; }
+
+        .switch-container { display: flex; justify-content: space-between; align-items: center; background: #262626; padding: 1.5rem; border-radius: 8px; border: 2px solid #444; margin-bottom: 1rem; }
+        .switch-label { font-size: 1.2rem; font-weight: bold; display: flex; align-items: center; gap: 1rem; }
+        .switch { position: relative; display: inline-block; width: 70px; height: 34px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ef4444; transition: .4s; border-radius: 34px; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); }
+        .slider:before { position: absolute; content: ""; height: 26px; width: 26px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
+        input:checked + .slider { background-color: var(--safe-green); }
+        input:checked + .slider:before { transform: translateX(36px); }
+
+        .schematic-room {
+            position: relative; width: 100%; max-width: 500px; aspect-ratio: 4/3; margin: 0 auto;
+            background: #111; border: 4px solid #444; border-radius: 8px; overflow: hidden;
+            background-image: linear-gradient(#333 1px, transparent 1px), linear-gradient(90deg, #333 1px, transparent 1px);
+            background-size: 20px 20px; transition: all 0.5s;
+        }
+        .seal-target {
+            position: absolute; border: 2px dashed var(--rescue-orange); cursor: pointer; transition: all 0.3s;
+            display: flex; justify-content: center; align-items: center; background: rgba(255,107,0,0.1);
+        }
+        .seal-target:hover { background: rgba(255,107,0,0.3); box-shadow: 0 0 10px var(--rescue-orange); }
+        .seal-target.sealed {
+            border: none;
+            background: repeating-linear-gradient(45deg, #10b981, #10b981 10px, #059669 10px, #059669 20px);
+            opacity: 0.8; box-shadow: 0 0 15px rgba(16, 185, 129, 0.5); pointer-events: none;
+        }
+        .seal-label { position: absolute; bottom: -25px; color: #ccc; font-size: 0.85rem; font-weight: bold; width: max-content; text-align: center; text-shadow: 1px 1px 2px #000; }
+
+        /* Dark Mode Target for Blackout Stage */
+        .dark-target { border: none; background: #1a1a1a; }
+        .dark-target:hover { background: #333; box-shadow: 0 0 15px rgba(255,255,255,0.2); }
+        .dark-target.sealed { background: var(--safe-green); opacity: 1; box-shadow: 0 0 20px var(--safe-green); }
+
+        .radio-tuner { width: 100%; appearance: none; background: transparent; margin: 2rem 0; }
+        .radio-tuner::-webkit-slider-runnable-track { width: 100%; height: 8px; background: #333; border-radius: 4px; border: 1px solid #555; }
+        .radio-tuner::-webkit-slider-thumb {
+            appearance: none; height: 30px; width: 15px; background: var(--rescue-orange);
+            margin-top: -11px; cursor: pointer; border-radius: 2px; box-shadow: 0 0 10px var(--rescue-orange);
+        }
+        .freq-display { font-family: var(--mono-font); font-size: 4rem; color: var(--safe-green); text-shadow: 0 0 10px rgba(16,185,129,0.5); letter-spacing: 2px; }
+        
+        .mcq-btn {
+            width: 100%; text-align: left; background: #262626; border: 2px solid #444; 
+            padding: 1.5rem; border-radius: 8px; margin-bottom: 1rem; font-size: 1.15rem; font-weight: bold; 
+            transition: all 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.3); color: white; cursor: pointer;
+        }
+        .mcq-btn:hover { background: #333; border-color: var(--rescue-orange); transform: translateY(-2px); }
+    </style>
+</head>
+<body id="main-body" class="p-2 md:p-6">
+
+    <header id="hud" class="w-full max-w-5xl mx-auto mb-6 tactical-panel p-5 flex flex-col md:flex-row justify-between items-center hidden transition-all duration-500">
+        <div class="flex items-center gap-4 mb-4 md:mb-0">
+            <div class="w-14 h-14 bg-[var(--rescue-orange)] text-black font-black text-2xl flex items-center justify-center rounded shadow-[0_0_15px_var(--rescue-orange)]">
+                指引
+            </div>
+            <div>
+                <h1 class="text-xl md:text-2xl font-black tracking-wide text-white">全民安全生存推演系統</h1>
+                <p id="hud-stage-info" class="text-sm text-[var(--rescue-orange)] font-bold tracking-wider mt-1">STAGE 01</p>
+            </div>
+        </div>
+        <div class="w-full md:w-1/3 bg-[#111] p-3 rounded-lg border border-[#333]">
+            <div class="flex justify-between text-sm mb-2 font-bold">
+                <span class="text-gray-300">防護力 / 生存機率</span>
+                <span id="hp-score" class="text-[var(--safe-green)] text-lg">100%</span>
+            </div>
+            <div class="hp-bar"><div id="hp-fill" class="hp-fill"></div></div>
+        </div>
+    </header>
+
+    <main class="w-full max-w-5xl mx-auto flex-1 flex flex-col relative z-10">
+        <div id="game-container" class="tactical-panel p-6 md:p-10 flex-1 flex flex-col shadow-2xl">
+            <!-- Dynamic Content Injected Here -->
+        </div>
+    </main>
+
+    <!-- Custom Modal -->
+    <div id="custom-modal" class="fixed inset-0 bg-black/90 z-[100] items-center justify-center p-4 backdrop-blur-md">
+        <div class="tactical-panel p-8 max-w-lg w-full border-t-8 border-t-[var(--alert-red)] shadow-[0_20px_50px_rgba(0,0,0,0.8)]">
+            <h3 id="modal-title" class="text-3xl font-black text-white mb-6 flex items-center gap-3"></h3>
+            <div id="modal-msg" class="text-gray-200 text-lg leading-relaxed mb-8"></div>
+            <button id="modal-btn-confirm" class="btn-tactical w-full py-4 text-xl">了解，繼續行動</button>
+        </div>
+    </div>
+
+    <script>
+        let audioCtx;
+        let noiseNode, noiseGain;
+
+        function initAudio() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        }
+
+        // Air Raid Siren
+        function playSiren() {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            osc.connect(gainNode); gainNode.connect(audioCtx.destination);
+            osc.type = 'sawtooth'; const now = audioCtx.currentTime;
+            
+            // Taiwan Siren: 1 Long (1.5s), 2 Short (0.5s each)
+            osc.frequency.setValueAtTime(400, now);
+            osc.frequency.linearRampToValueAtTime(800, now + 0.5);
+            osc.frequency.linearRampToValueAtTime(400, now + 1.5);
+            gainNode.gain.setValueAtTime(0, now);
+            gainNode.gain.linearRampToValueAtTime(0.3, now + 0.2);
+            gainNode.gain.linearRampToValueAtTime(0, now + 1.5);
+
+            osc.frequency.setValueAtTime(400, now + 2);
+            osc.frequency.linearRampToValueAtTime(800, now + 2.2);
+            osc.frequency.linearRampToValueAtTime(400, now + 2.5);
+            gainNode.gain.setValueAtTime(0, now + 2);
+            gainNode.gain.linearRampToValueAtTime(0.3, now + 2.2);
+            gainNode.gain.linearRampToValueAtTime(0, now + 2.5);
+
+            osc.frequency.setValueAtTime(400, now + 3);
+            osc.frequency.linearRampToValueAtTime(800, now + 3.2);
+            osc.frequency.linearRampToValueAtTime(400, now + 3.5);
+            gainNode.gain.setValueAtTime(0, now + 3);
+            gainNode.gain.linearRampToValueAtTime(0.3, now + 3.2);
+            gainNode.gain.linearRampToValueAtTime(0, now + 3.5);
+
+            osc.start(now); osc.stop(now + 4);
+        }
+
+        // Radio Static White Noise
+        function startStatic() {
+            initAudio();
+            if(noiseNode) return; 
+            const bufferSize = audioCtx.sampleRate * 2;
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const output = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) { output[i] = Math.random() * 2 - 1; }
+            noiseNode = audioCtx.createBufferSource();
+            noiseNode.buffer = buffer;
+            noiseNode.loop = true;
+            noiseGain = audioCtx.createGain();
+            noiseGain.gain.value = 0.1;
+            noiseNode.connect(noiseGain);
+            noiseGain.connect(audioCtx.destination);
+            noiseNode.start(0);
+        }
+
+        function setStaticVol(vol) {
+            if(noiseGain) noiseGain.gain.value = vol;
+        }
+
+        function stopStatic() {
+            if(noiseNode) { noiseNode.stop(); noiseNode.disconnect(); noiseNode = null; }
+        }
+
+        // 完整 20 個關卡配置
+        const campaign = [
+            { type: 'intro', title: '全民安全生存推演',
+              content: `
+                    <div class="mb-6 text-center">
+                        <span class="inline-block bg-[var(--rescue-orange)] text-black font-black px-4 py-1 rounded text-sm mb-4">實境防衛演練系統 v2.0</span>
+                        <h2 class="text-4xl font-black text-white leading-tight">當重大危機發生<br>你能否挺過 20 項生死考驗？</h2>
+                    </div>
+                    <div class="bg-[#111] p-6 rounded-lg border border-[#333] mb-8">
+                        <p class="text-gray-300 text-lg leading-relaxed mb-4">本系統基於國防部《當危機來臨時臺灣全民安全指引》設計。在極端恐慌下，唯一能拯救你的，是平時建立的「肌肉記憶」。</p>
+                        <p class="text-[var(--rescue-orange)] font-bold">⚠️ 演練警告：</p>
+                        <ul class="list-disc pl-6 text-gray-400 mt-2 space-y-2">
+                            <li>您將面臨 20 個真實的生存抉擇，包含停電、急救、化災與資訊戰。</li>
+                            <li>違反指引的決策將導致實體傷害，並扣除「生存機率(HP)」。</li>
+                            <li>HP歸零即代表在現實中遭遇不測。</li>
+                        </ul>
+                    </div>`
+            },
+            
+            // S01: Inventory
+            { id: 'S01', title: '情境 1：緊急避難包整備', type: 'inventory',
+              context: '📍 地點：你的臥室\n平時整備階段。你需要準備一個「緊急避難包」隨時放在門口。',
+              eduContext: '【生存指引】避難包必須能「隨手拿走就跑」。重點在於：維持生命、防護受傷、求援、自救。',
+              instruction: '背包容量有限！請選出 5 項【最能保命】的關鍵物資：',
+              items: [
+                  { id: 'water', icon: '💧', name: '水與高熱量乾糧', isCore: true, reason: '避難所不一定有水電，維持生命基本需求。' },
+                  { id: 'gloves', icon: '🧤', name: '粗棉皮手套', isCore: true, reason: '推開瓦礫、爬過碎玻璃必備。' },
+                  { id: 'laptop', icon: '💻', name: '筆記型電腦', isCore: false, reason: '過重且依賴電力，拖慢逃生速度。' },
+                  { id: 'radio', icon: '📻', name: '手搖收音機', isCore: true, reason: '基地台斷訊時，唯一能接收政府指示的工具。' },
+                  { id: 'firstaid', icon: '🩹', name: '個人急救包', isCore: true, reason: '大出血必須靠自己立即止血。' },
+                  { id: 'tent', icon: '⛺', name: '露營帳篷', isCore: false, reason: '體積過大，在地下室避難不實用。' },
+                  { id: 'whistle', icon: '哨', name: '高音求救哨', isCore: true, reason: '被壓在瓦礫下大聲呼救會耗盡體力，吹哨子能傳遞更遠。' },
+                  { id: 'pillow', icon: '🛌', name: '大抱枕', isCore: false, reason: '非必需品，佔用寶貴空間。' }
+              ], limit: 5
+            },
+
+            // S02: Toggles
+            { id: 'S02', title: '情境 2：離家前管線遮斷', type: 'toggles',
+              context: '📍 地點：住家玄關\n遠方傳來隱約的爆炸聲，社區廣播要求立刻前往防空避難所。',
+              eduContext: '離開家門前，若時間允許，必須進行「防護性關閉」，避免空襲引發嚴重的二次災害。',
+              instruction: '出門前的最後 10 秒，請點擊切換下方的居家管線開關至【關閉】狀態：',
+              switches: [
+                  { id: 'gas', label: '🛢️ 瓦斯總開關', targetState: false, initState: true, desc: '管線破裂引發大火' },
+                  { id: 'elec', label: '⚡ 總電源 (無熔絲開關)', targetState: false, initState: true, desc: '電線走火引發火災' },
+                  { id: 'water', label: '🚰 自來水總閥', targetState: false, initState: true, desc: '管線破裂導致淹水' }
+              ]
+            },
+
+            // S03: MCQ Siren
+            { id: 'S03', title: '情境 3：空襲警報與臨戰應變', type: 'siren-mcq',
+              context: '📍 地點：辦公室\n窗外突然傳來刺耳的防空警報聲。',
+              eduContext: '防空警報音符為「1長音，2短音，連續3次」。此時最大的殺手是爆炸產生的「高壓爆震波」與「碎玻璃」。',
+              instruction: '來不及找到地下室，必須就地掩蔽。請選擇最正確的「抗爆姿勢」：',
+              options: [
+                  { text: 'A. 站在窗戶旁邊觀察外面發生什麼事。', correct: false, reason: '面向窗戶會被爆震波擊碎的玻璃直接刺穿！' },
+                  { text: 'B. 採跪趴姿，背向窗戶。雙手遮眼耳，並將「嘴巴微張」。', correct: true, reason: '正確！背向窗戶防玻璃；「嘴巴微張」可平衡壓力差，防耳膜震破！' },
+                  { text: 'C. 像地震一樣平躺在桌下，緊閉雙唇。', correct: false, reason: '平躺會讓胸腹大面積吸收爆炸震動導致內傷。' }
+              ]
+            },
+
+            // S04: Building
+            { id: 'S04', title: '情境 4：尋找防空避難設施', type: 'building',
+              context: '📍 地點：市區街道上\n你走在街上，警報大作。你必須在 10 秒內跑進大樓躲避。',
+              eduContext: '空襲時，應遠離玻璃、遠離頂樓。最佳避難點是具有「防空避難設備標誌」的地下室。',
+              instruction: '請點擊這棟大樓中「最能保命」的樓層空間：',
+              floors: [
+                  { id: 'roof', icon: '🏢', title: '頂樓天台', subtitle: '視野極佳無遮蔽', type: 'danger', msg: '屋頂遭到炸彈直接命中的機率最高！' },
+                  { id: 'first', icon: '🏪', title: '一樓大廳', subtitle: '大片落地玻璃窗', type: 'danger', msg: '炸彈爆炸時，落地窗會變成鋒利的玻璃散彈！' },
+                  { id: 'basement', icon: '🪜', title: '地下停車場', subtitle: '無窗戶，入口有黃色標誌', isSafe: true, type: 'safe', msg: '地下室的厚重水泥與土壤，能有效吸收爆震波。' }
+              ]
+            },
+
+            // S05: Sequence
+            { id: 'S05', title: '情境 5：災後初期滅火', type: 'sequence',
+              context: '📍 地點：避難所出口\n空襲過後，樓梯間電線走火引發小型火災，阻擋了逃生動線。',
+              eduContext: '面對初期的火災，應迅速使用滅火器撲滅。必須牢記操作口訣：「拉、瞄、壓、掃」。',
+              instruction: '你拿下一具乾粉滅火器。請「依正確的順序」，點擊下方操作步驟：',
+              sequence: [
+                  { id: 1, text: '【拉】拔出滅火器上方的安全插梢。' },
+                  { id: 2, text: '【瞄】拉起皮管，將噴嘴瞄準「火源的底部」。' },
+                  { id: 3, text: '【壓】用力壓下握把，讓滅火劑噴出。' },
+                  { id: 4, text: '【掃】向火源的左右兩側移動掃射，直到撲滅。' }
+              ]
+            },
+
+            // S06: MCQ Triage
+            { id: 'S06', title: '情境 6：災難檢傷分類 (Triage)', type: 'mcq',
+              context: '📍 地點：瓦礫堆旁\n現場有兩名傷患：\n傷患A：手臂骨折，痛得大聲哀嚎。\n傷患B：大腿動脈噴血，意識模糊安靜無聲。',
+              eduContext: '醫療資源匱乏時，「會大聲叫」代表呼吸道暢通暫無立即生命危險；「安靜無聲」往往是瀕死徵兆。',
+              instruction: '你只有一套急救包，應該優先救治誰？',
+              options: [
+                  { text: 'A. 先救大聲哀嚎的傷患 A。', correct: false, reason: '他能大聲叫代表呼吸道暢通，骨折雖痛但不立即致命（綠/黃區）。' },
+                  { text: 'B. 先救安靜無聲、大腿噴血的傷患 B。', correct: true, reason: '大動脈出血 3 分鐘內就會導致休克死亡（紅區），必須立即優先止血。' }
+              ]
+            },
+
+            // S07: Sequence Tourniquet
+            { id: 'S07', title: '情境 7：戰傷救護 (大出血)', type: 'sequence',
+              context: '📍 地點：街道上\n確認要優先救治大腿動脈噴血的傷患 B。',
+              eduContext: '動脈大出血會在極短時間內致命。使用「戰術止血帶 (CAT)」是唯一解法。',
+              instruction: '避難包裡有止血帶。請「依正確的急救順序」，點擊下方步驟：',
+              sequence: [
+                  { id: 1, text: '用雙手對傷口進行「直接加壓」暫時減緩出血。' },
+                  { id: 2, text: '將止血帶放置在傷口上方約 5~8 公分處。' },
+                  { id: 3, text: '拉緊魔鬼氈，用力旋轉止血棒直到出血完全停止。' },
+                  { id: 4, text: '扣上固定夾，並「寫下使用止血帶的精確時間」。' }
+              ]
+            },
+
+            // S08: Hotspot
+            { id: 'S08', title: '情境 8：化學戰劑與毒氣警報', type: 'hotspot',
+              context: '📍 地點：大樓住家內\n廣播發布「化學毒氣外洩」警報。街上瀰漫不明黃色煙霧。',
+              eduContext: '面對化學戰劑，此時最佳策略是「就地避難」並「阻絕外部空氣對流」。',
+              instruction: '毒氣正在蔓延，請點擊藍圖中【3處】需要用膠帶封死的氣流通道：',
+              targets: [
+                  { id: 'door', top: '70%', left: '20%', width: '20%', height: '10%', label: '大門門縫' },
+                  { id: 'window', top: '30%', left: '70%', width: '25%', height: '30%', label: '玻璃窗框' },
+                  { id: 'ac', top: '10%', left: '30%', width: '15%', height: '15%', label: '冷氣通風口' }
+              ]
+            },
+
+            // S09: Clicker (CPR)
+            { id: 'S09', title: '情境 9：心肺復甦術 (CPR)', type: 'clicker',
+              context: '📍 地點：集結點\n有人因為恐慌與奔跑引發心肌梗塞，突然倒地無呼吸心跳！',
+              eduContext: '在取得 AED 前，持續且快速的胸外按壓能代替心臟將含氧血打入腦部，避免腦死。',
+              instruction: '請在下方按鈕快速點擊，完成【30次】胸外按壓！',
+              target: 30
+            },
+
+            // S10: Tuning Radio
+            { id: 'S10', title: '情境 10：資訊中斷下的求生', type: 'tuning',
+              context: '📍 地點：避難所內\n已經躲藏了 12 小時。區域電網全毀，手機失去訊號。',
+              eduContext: '電力與電信極易癱瘓。此時政府會透過指定的「防救災廣播電台」發布指示。',
+              instruction: '拿出收音機。請拖曳滑桿尋找指定的政府頻道（FM 104.9）：',
+              targetFreq: 104.9
+            },
+
+            // S11: MCQ Fake News
+            { id: 'S11', title: '情境 11：假訊息辨識', type: 'mcq',
+              context: '📍 地點：避難所\n手機網路短暫恢復，Line 群組瘋傳：「政府高層已逃跑，今晚敵軍將使用毒氣，大家快往港口逃！」',
+              eduContext: '在重大災難期間，認知作戰與恐慌性假訊息會大量傳播，誘使民眾離開安全掩體。',
+              instruction: '面對這則訊息，你該如何反應？',
+              options: [
+                  { text: 'A. 寧可信其有，立刻收拾背包往港口出發。', correct: false, reason: '盲目逃離堅固的避難所，會讓你在空曠處遭遇致命的空襲。' },
+                  { text: 'B. 留在原地。不轉傳，並開啟收音機確認政府官方廣播。', correct: true, reason: '在混亂中，唯一可靠的是透過指定防災頻道獲取的官方資訊。' }
+              ]
+            },
+
+            // S12: MCQ Under Fire
+            { id: 'S12', title: '情境 12：敵火下應變', type: 'mcq',
+              context: '📍 地點：街道上\n你正在前往官方集結點的路上，突然聽到附近傳來連續的槍響。',
+              eduContext: '遭遇槍擊或不明攻擊時，降低身體面積與尋找堅固掩體是唯一保命法則。',
+              instruction: '聽到槍聲的第一時間，你應該怎麼做？',
+              options: [
+                  { text: 'A. 拿出手機錄影並尋找槍聲來源。', correct: false, reason: '停留在原處錄影會讓自己成為活靶。' },
+                  { text: 'B. 立即大聲尖叫並往反方向直線狂奔。', correct: false, reason: '直線奔跑非常容易被瞄準，且尖叫會暴露你的位置。' },
+                  { text: 'C. 立刻趴下（臥倒），並低姿勢爬向堅固掩體。', correct: true, reason: '臥倒能瞬間減少 80% 的中彈面積，隨後依靠堅固掩體掩護。' }
+              ]
+            },
+
+            // S13: Hotspot Blackout
+            { id: 'S13', title: '情境 13：斷電摸黑', type: 'hotspot',
+              dark: true,
+              context: '📍 地點：避難所內部\n受到電磁脈衝(EMP)影響，全區無預警大停電，四周一片漆黑。',
+              eduContext: '在絕對黑暗中容易發生踩踏或撞擊受傷。第一時間必須保持冷靜並尋找照明。',
+              instruction: '請在黑暗中摸索（點擊）找到避難包內的手電筒：',
+              targets: [
+                  { id: 'flashlight', top: '45%', left: '55%', width: '20%', height: '20%', label: '🔦', customClass: 'dark-target' }
+              ]
+            },
+
+            // S14: Sequence SOS
+            { id: 'S14', title: '情境 14：發送求救信號', type: 'sequence',
+              context: '📍 地點：廢墟縫隙\n你被困在倒塌的瓦礫堆下，聽到外面有搜救隊的聲音。',
+              eduContext: '國際通用的 SOS 求救信號為「三短、三長、三短」。使用硬物敲擊能傳遞得更遠。',
+              instruction: '請依照 SOS 摩斯密碼順序，點擊敲擊節奏：',
+              sequence: [
+                  { id: 1, text: '三聲短敲擊 (S: ・・・)' },
+                  { id: 2, text: '三聲長敲擊 (O: ———)' },
+                  { id: 3, text: '三聲短敲擊 (S: ・・・)' }
+              ]
+            },
+
+            // S15: MCQ Food
+            { id: 'S15', title: '情境 15：糧食配給', type: 'mcq',
+              context: '📍 地點：住家地下室\n長時間停電，你收集了冰箱內的剩菜、冷凍肉品，以及避難包內的營養口糧。',
+              eduContext: '停電狀態下，冷藏與冷凍食品會迅速腐敗。食用順序直接關係到食物中毒的風險。',
+              instruction: '為了最大化糧食利用率，你應該優先消耗哪一類食物？',
+              options: [
+                  { text: 'A. 優先吃避難包內的乾燥口糧，保留冰箱食物。', correct: false, reason: '口糧可以保存數年，但冰箱食物在停電數小時後就會開始腐敗。' },
+                  { text: 'B. 優先消耗冷藏室與冷凍庫的易腐敗食物。', correct: true, reason: '停電後應盡快煮熟並消耗生鮮食品，最後再吃乾燥與罐頭食品。' }
+              ]
+            },
+
+            // S16: Toggles Power
+            { id: 'S16', title: '情境 16：備用電力修復', type: 'toggles',
+              context: '📍 地點：地下室機房\n避難所備用發電機啟動，但你需要手動重置無熔絲開關。',
+              eduContext: '災後重啟電源前，應依序開啟關鍵開關以維持避難所基本運作。',
+              instruction: '請將以下三個總成開關全部切換至【ON (開啟)】狀態：',
+              switches: [
+                  { id: 'main', label: '🔌 主供電迴路', targetState: true, initState: false, desc: '無法供電' },
+                  { id: 'light', label: '💡 照明迴路', targetState: true, initState: false, desc: '導致一片漆黑' },
+                  { id: 'vent', label: '💨 通風過濾系統', targetState: true, initState: false, desc: '導致室內缺氧' }
+              ]
+            },
+
+            // S17: MCQ Water Filter
+            { id: 'S17', title: '情境 17：災區飲水處理', type: 'mcq',
+              context: '📍 地點：避難所\n自來水管線受損，流出的自來水混濁且可能受重度污染。',
+              eduContext: '災後自來水極易遭污水滲透。飲用未經處理的生水會導致嚴重腸胃炎，在無醫療狀態下會致命。',
+              instruction: '面對混濁的自來水，你應該採取哪種最安全的處理方式？',
+              options: [
+                  { text: 'A. 只要水看起來變清澈了，沒有異味就可以直接喝。', correct: false, reason: '清澈的水中依然可能含有致命的微小細菌與寄生蟲。' },
+                  { text: 'B. 靜置沉澱泥沙，用乾淨棉布過濾後【完全煮沸】。', correct: true, reason: '沉澱、過濾雜質並確實煮沸，是最有效且無風險的殺菌方式。' },
+                  { text: 'C. 吞下兩顆胃藥，然後直接把生水喝下去。', correct: false, reason: '胃藥無法預防嚴重的水源性傳染病，且會引發劇烈腹瀉。' }
+              ]
+            },
+
+            // S18: Value Slider Water
+            { id: 'S18', title: '情境 18：水資源配給', type: 'value-slider',
+              context: '📍 地點：避難所\n預估還要 3 天救援才會抵達，剩餘水量極少。',
+              eduContext: '人體在靜止狀態下，每日必須攝取絕對下限的水分以維持腎臟運作（大約為 1000 毫升）。',
+              instruction: '請拖曳滑桿，設定成人每日【最低生存飲水下限】（提示：大約 1000 毫升）：',
+              min: 0, max: 3000, step: 100, initValue: 0, unit: '毫升 (ml)',
+              display: '成人每日基本生存需約 1000 毫升',
+              targetMin: 800, targetMax: 1200,
+              successMsg: '精準的水資源控管是長期抗戰的關鍵。您設定了合理的水量，確保所有人能以最低限度存活至救援抵達。',
+              lowMsg: '配給量過低！嚴重缺水將導致急性休克與器官衰竭。',
+              highMsg: '配給量過高！水資源過度消耗，在撐到救援抵達前就會面臨斷水危機。'
+            },
+
+            // S19: MCQ Hypothermia
+            { id: 'S19', title: '情境 19：失溫防治', type: 'mcq',
+              context: '📍 地點：避難所\n入夜後氣溫驟降至 10 度以下，某位傷患開始劇烈發抖、嘴唇發紫。',
+              eduContext: '失溫是災區常見的無聲殺手。體溫流失的速度遠超乎想像，必須立刻進行阻絕。',
+              instruction: '避難包內有哪項物品最適合立刻處理失溫？',
+              options: [
+                  { text: 'A. 讓他喝下大量的烈酒暖身。', correct: false, reason: '喝酒會讓微血管擴張，反而加速熱量散失，導致核心體溫更快下降！' },
+                  { text: 'B. 使用「急救保暖毯(太空毯)」將他全身包覆。', correct: true, reason: '太空毯能反射人體 90% 的熱輻射，有效阻絕體溫流失並防風防水。' },
+                  { text: 'C. 讓他在室內來回跑步產生熱量。', correct: false, reason: '傷患體力已經透支，過度活動會加速耗竭並可能引發休克。' }
+              ]
+            },
+
+            // S20: MCQ Final Choice
+            { id: 'S20', title: '情境 20：最終抉擇', type: 'mcq',
+              context: '📍 地點：密封的避難室\n外頭化學毒氣尚未散去。突然，你聽到門外有人猛烈敲門，哭喊著求救。',
+              eduContext: '在核生化(CBRN)威脅下，避難所的氣密性一旦被破壞，將導致內部所有人全數陣亡。這是在極端生存情境中最殘酷但也最必要的紀律。',
+              instruction: '你現在該怎麼做？',
+              options: [
+                  { text: 'A. 基於人道主義，立刻開門讓他進來。', correct: false, reason: '【致命錯誤】開門的瞬間毒氣會灌入室內，導致你與室內所有倖存者一起死亡。' },
+                  { text: 'B. 絕對不開門，並用廣播請他前往其他開放式除污站。', correct: true, reason: '【正確防護】保全氣密空間是最高原則。未經除污的人員絕對不可進入安全區。' }
+              ]
+            },
+
+            { type: 'ending' }
+        ];
+
+        let state = {
+            idx: 0, hp: 100, inventory: [], seqArr: [], sealedSpots: 0, cprCount: 0
+        };
+
+        const elements = {
+            body: document.getElementById('main-body'), hud: document.getElementById('hud'),
+            container: document.getElementById('game-container'), hpScore: document.getElementById('hp-score'),
+            hpFill: document.getElementById('hp-fill'), stageInfo: document.getElementById('hud-stage-info'),
+            modal: document.getElementById('custom-modal'), modalTitle: document.getElementById('modal-title'),
+            modalMsg: document.getElementById('modal-msg'), modalBtn: document.getElementById('modal-btn-confirm')
+        };
+
+        function showAlert(title, msg, type, callback) {
+            elements.modalTitle.innerHTML = title;
+            elements.modalTitle.className = `text-3xl font-black mb-4 flex items-center gap-3 ${type === 'danger' ? 'text-[var(--alert-red)]' : 'text-[var(--safe-green)]'}`;
+            elements.modal.querySelector('.tactical-panel').style.borderTopColor = type === 'danger' ? 'var(--alert-red)' : 'var(--safe-green)';
+            elements.modalMsg.innerHTML = msg;
+            elements.modal.classList.add('active');
+            elements.modalBtn.onclick = () => { elements.modal.classList.remove('active'); if (callback) callback(); };
+        }
+
+        function applyPenalty(amount, reason, callback) {
+            state.hp -= amount; if(state.hp < 0) state.hp = 0;
+            elements.hpScore.innerText = `${state.hp}%`; elements.hpFill.style.width = `${state.hp}%`;
+            if(state.hp <= 50) { elements.hpFill.style.background = 'var(--alert-red)'; elements.hpScore.style.color = 'var(--alert-red)'; }
+            
+            elements.body.classList.add('damage-shake');
+            setTimeout(() => elements.body.classList.remove('damage-shake'), 400);
+
+            showAlert('⚠️ 遭遇致命傷害', `<strong>防護力下降：-${amount}% HP</strong><br><br><span class="text-gray-300">${reason}</span>`, 'danger', () => {
+                if(state.hp <= 0) {
+                    elements.container.innerHTML = `<div class="text-center flex flex-col justify-center flex-1"><h2 class="text-6xl font-black text-[var(--alert-red)] mb-4 tracking-widest">演練失敗</h2><p class="text-2xl text-gray-400 mb-8">生存機率歸零。<br>在真實的重大危機中，錯誤的決定將導致無法挽回的後果。</p><button onclick="location.reload()" class="btn-tactical py-4 px-10 mx-auto text-xl">重新熟讀指引並重試</button></div>`;
+                } else if (callback) callback();
+            });
+        }
+
+        function nextStage() {
+            stopStatic(); 
+            state.idx++; renderStage();
+        }
+
+        function renderStage() {
+            const stage = campaign[state.idx];
+            if(!stage) return;
+            // Reset per stage state
+            state.inventory = []; state.seqArr = []; state.sealedSpots = 0; state.cprCount = 0;
+
+            if(stage.type === 'intro' || stage.type === 'ending') { elements.hud.classList.add('hidden'); } 
+            else { elements.hud.classList.remove('hidden'); elements.stageInfo.innerText = `STAGE ${state.idx < 10 ? '0'+state.idx : state.idx}`; }
+
+            let html = '';
+            let contextHtml = stage.context ? `<div class="context-badge font-bold text-gray-300 mb-2">${stage.context.replace('\n', '<br>')}</div>` : '';
+            let eduHtml = stage.eduContext ? `<div class="edu-box p-5 mb-6 rounded-lg text-base text-gray-200 shadow-inner bg-black/30 border-l-4 border-[var(--safe-green)]">${stage.eduContext}</div>` : '';
+            
+            if (stage.type !== 'intro' && stage.type !== 'ending') {
+                html += `<div class="mb-4">${contextHtml}</div><h2 class="text-3xl font-black text-white mb-4 tracking-wide">${stage.title}</h2>${eduHtml}<p class="text-white mb-8 font-bold text-xl border-l-4 border-[var(--rescue-orange)] pl-4">${stage.instruction}</p>`;
+            }
+
+            if(stage.type === 'intro') {
+                html = `<div class="flex-1 flex flex-col justify-center items-center text-left max-w-3xl mx-auto w-full">${stage.content}<div class="text-center w-full mt-4"><button onclick="initAudio(); nextStage();" class="btn-tactical px-12 py-5 text-2xl tracking-widest w-full md:w-auto shadow-[0_0_20px_var(--rescue-orange-dim)]">啟動生存演練</button></div></div>`;
+            }
+            else if(stage.type === 'inventory') {
+                let itemsHtml = stage.items.map(item => `<div class="item-card shadow-lg" data-id="${item.id}" onclick="toggleItem(this, ${stage.limit})"><div class="item-icon">${item.icon}</div><div class="font-bold text-base text-gray-200 mt-2">${item.name}</div></div>`).join('');
+                html += `<div class="bg-black/50 p-4 rounded-lg mb-6 flex justify-between items-center border-2 border-[#333]"><span class="text-gray-300 font-bold text-lg">背包已裝載數量：</span><span class="text-2xl font-black text-[var(--rescue-orange)]"><span id="inv-count">0</span> / ${stage.limit}</span></div><div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">${itemsHtml}</div><div class="text-right"><button id="btn-verify-inv" onclick="verifyInventory()" class="btn-tactical px-10 py-4 text-lg" disabled>確認打包</button></div>`;
+            }
+            else if(stage.type === 'toggles') {
+                let switchesHtml = stage.switches.map(s => `
+                    <div class="switch-container">
+                        <div class="switch-label">${s.label}</div>
+                        <label class="switch">
+                            <input type="checkbox" id="switch-${s.id}" ${s.initState ? 'checked' : ''}>
+                            <span class="slider"></span>
+                        </label>
+                    </div>`).join('');
+                html += `<div class="max-w-md mx-auto w-full">${switchesHtml}<div class="text-center mt-8"><button onclick="verifyToggles()" class="btn-tactical px-10 py-4 text-lg w-full">完成切換，繼續行動</button></div></div>`;
+            }
+            else if(stage.type === 'mcq' || stage.type === 'siren-mcq') {
+                let optionsHtml = stage.options.map(opt => {
+                    const safeReason = opt.reason.replace(/'/g, "\\'");
+                    return `<button onclick="handleMCQ(${opt.correct}, '${safeReason}')" class="mcq-btn">${opt.text}</button>`;
+                }).join('');
+                
+                let sirenHtml = stage.type === 'siren-mcq' ? `<div class="w-full lg:w-1/3 flex flex-col items-center justify-center bg-black/40 p-8 rounded-xl border border-[#444] shadow-inner"><div class="w-24 h-24 rounded-full bg-[var(--rescue-orange-dim)] border-4 border-[var(--rescue-orange)] flex items-center justify-center mb-4 cursor-pointer hover:bg-[var(--rescue-orange)] hover:text-black transition-all text-[var(--rescue-orange)] text-4xl" onclick="initAudio(); playSiren();">🔊</div><p class="text-[var(--rescue-orange)] font-black tracking-widest mb-2">嗚— 嗚— 嗚—</p><p class="text-gray-400 text-center text-sm font-bold">點擊播放空襲警報</p></div>` : '';
+                let wrapClass = stage.type === 'siren-mcq' ? 'w-full lg:w-2/3' : 'w-full max-w-3xl mx-auto';
+                
+                html += `<div class="flex flex-col lg:flex-row gap-8">${sirenHtml}<div class="${wrapClass} flex flex-col justify-center">${optionsHtml}</div></div>`;
+            }
+            else if(stage.type === 'building') {
+                let floorsHtml = stage.floors.map(f => {
+                    const safeMsg = f.msg.replace(/'/g, "\\'");
+                    return `<div class="floor-zone shadow-lg" onclick="handleBuildingClick('${f.type}', '${safeMsg}')"><div class="floor-icon">${f.icon}</div><div class="floor-desc"><div class="floor-title text-xl font-bold text-white">${f.title}</div><div class="floor-subtitle text-gray-400">${f.subtitle}</div>${f.isSafe ? `<div class="shelter-sign">防空避難設備</div>` : ''}</div></div>`;
+                }).join('');
+                html += `<div class="building-container bg-black/40 p-6 rounded-xl border-2 border-[#333] shadow-inner">${floorsHtml}</div>`;
+            }
+            else if(stage.type === 'sequence') {
+                let shuffled = [...stage.sequence].sort(() => Math.random() - 0.5);
+                let seqHtml = shuffled.map(item => `<div class="seq-row shadow-md" data-id="${item.id}" onclick="handleSequence(this, ${item.id}, ${stage.sequence.length})"><div class="seq-num">?</div><div class="flex-1 text-gray-100 text-lg font-bold">${item.text}</div></div>`).join('');
+                html += `<div class="bg-black/40 p-8 rounded-xl border-2 border-[#333] max-w-4xl mx-auto shadow-inner">${seqHtml}</div><div class="text-center mt-4"><button onclick="resetSequence()" class="btn-tactical px-6 py-2 text-sm border-gray-500 text-gray-400">重新排列</button></div>`;
+            }
+            else if(stage.type === 'hotspot') {
+                let targetsHtml = stage.targets.map(t => `<div class="seal-target ${t.customClass || ''}" style="top:${t.top}; left:${t.left}; width:${t.width}; height:${t.height};" onclick="handleSeal(this, ${stage.targets.length})"><div class="seal-label">${t.label}</div></div>`).join('');
+                let roomStyle = stage.dark ? 'background: #000; border-color: #111; background-image: none;' : '';
+                html += `<div class="schematic-room shadow-2xl" style="${roomStyle}">${targetsHtml}</div><div class="text-center mt-6 text-gray-400 font-bold">${stage.dark ? '黑暗中尋找目標：' : '已封閉縫隙：'}<span id="seal-count" class="text-[var(--safe-green)] text-xl ml-2">0</span> / ${stage.targets.length}</div>`;
+            }
+            else if(stage.type === 'clicker') {
+                html += `<div class="bg-black/50 p-8 rounded-xl border-2 border-[#333] max-w-2xl mx-auto w-full text-center shadow-inner">
+                    <div class="text-gray-400 font-bold mb-4 text-xl">目標按壓次數：<span class="text-white">${stage.target}</span></div>
+                    <div class="text-8xl font-black text-[var(--rescue-orange)] mb-8" id="click-count">0</div>
+                    <button id="cpr-btn" onclick="handleCPRClick(${stage.target})" class="w-48 h-48 rounded-full bg-red-600 hover:bg-red-500 text-white font-black text-3xl shadow-[0_0_40px_rgba(239,68,68,0.5)] transition-transform border-4 border-red-800 mx-auto block active:scale-95">按壓胸口</button>
+                </div>`;
+            }
+            else if(stage.type === 'tuning') {
+                html += `<div class="bg-black/50 p-8 rounded-xl border-2 border-[#333] max-w-2xl mx-auto w-full text-center shadow-inner"><div id="freq-display" class="freq-display mb-8">88.0</div><div class="text-gray-400 font-bold mb-2">FM MHz</div><input type="range" class="radio-tuner" id="radio-slider" min="88.0" max="108.0" step="0.1" value="88.0" oninput="handleTuning(this.value, ${stage.targetFreq})"><div id="radio-msg" class="mt-8 text-xl font-bold text-gray-500 h-16 flex items-center justify-center border-t border-[#444] pt-4">...沙沙雜訊...</div><button id="btn-radio-next" onclick="nextStage()" class="btn-tactical mt-6 px-10 py-4 text-lg hidden">收到指示，行動！</button></div>`;
+                setTimeout(() => { startStatic(); }, 100);
+            }
+            else if(stage.type === 'value-slider') {
+                // Guaranteed variables to prevent NaN or undefined bugs
+                const min = stage.min !== undefined ? stage.min : 0;
+                const max = stage.max !== undefined ? stage.max : 100;
+                const step = stage.step !== undefined ? stage.step : 1;
+                const initVal = stage.initValue !== undefined ? stage.initValue : min;
+
+                html += `<div class="bg-black/50 p-8 rounded-xl border-2 border-[#333] max-w-2xl mx-auto w-full text-center shadow-inner">
+                    <div id="slider-display" class="freq-display mb-8">${initVal}</div>
+                    <div class="text-gray-400 font-bold mb-2">${stage.unit || ''}</div>
+                    <input type="range" class="radio-tuner" id="value-slider-input" min="${min}" max="${max}" step="${step}" value="${initVal}" oninput="document.getElementById('slider-display').innerText = this.value">
+                    <div class="mt-4 text-gray-400 font-bold">${stage.display || ''}</div>
+                    <button onclick="verifyValueSlider()" class="btn-tactical mt-8 px-10 py-4 text-lg w-full">確認配給量</button>
+                </div>`;
+            }
+            else if(stage.type === 'ending') {
+                let evalText = state.hp >= 80 ? '應變處置果斷正確，展現了極高的求生意識。您已具備成為社區防衛種子的資格！' : (state.hp >= 50 ? '勉強度過危機，但部分決策失誤造成了不必要的傷害。強烈建議重新複習安全指引手冊。' : '決策嚴重失誤。');
+                let gradeColor = state.hp >= 80 ? 'var(--safe-green)' : 'var(--rescue-orange)';
+                html = `<div class="flex-1 flex flex-col justify-center items-center text-center"><h2 class="text-6xl font-black text-white mb-2 tracking-widest" style="color: ${gradeColor}; text-shadow: 0 0 20px rgba(255,255,255,0.2);">SURVIVAL CONFIRMED</h2><p class="text-2xl text-gray-400 mb-10 font-bold">20 項演練結束，成功生還。</p><div class="bg-[#111] border-4 border-[#333] p-10 rounded-2xl max-w-3xl w-full shadow-2xl"><div class="text-4xl font-black text-white mb-8 border-b-4 border-[#333] pb-6">綜合生存機率評估: <span class="text-5xl ml-2" style="color: ${gradeColor};">${state.hp}%</span></div><p class="text-xl leading-relaxed text-gray-300 font-bold">${evalText}</p></div><button onclick="location.reload()" class="btn-tactical px-10 py-4 mt-12 text-xl">重啟系統</button></div>`;
+            }
+
+            elements.container.innerHTML = html;
+        }
+
+        // Logic Helpers
+        window.toggleItem = function(el, limit) {
+            const id = el.dataset.id;
+            if(state.inventory.includes(id)) { state.inventory = state.inventory.filter(i => i !== id); el.classList.remove('selected'); } 
+            else { if(state.inventory.length >= limit) return; state.inventory.push(id); el.classList.add('selected'); }
+            const count = state.inventory.length; document.getElementById('inv-count').innerText = count;
+            document.getElementById('btn-verify-inv').disabled = (count !== limit);
+        };
+        
+        window.verifyInventory = function() {
+            const stage = campaign[state.idx]; let mistakes = [];
+            state.inventory.forEach(itemId => { const itemDef = stage.items.find(i => i.id === itemId); if(!itemDef.isCore) mistakes.push(`❌ <strong>${itemDef.name}</strong>：${itemDef.reason}`); });
+            if(mistakes.length === 0) showAlert('整備完美！', '您選擇了符合「維持生命」原則的物資，為避難打下良好基礎。', 'safe', nextStage);
+            else applyPenalty(mistakes.length * 5, `選擇了錯誤物資，會拖慢逃生速度：<br><br><div class="text-left text-base space-y-3 bg-black/50 p-4 rounded border border-red-900">${mistakes.join('<br>')}</div>`, nextStage);
+        };
+
+        window.verifyToggles = function() {
+            const stage = campaign[state.idx];
+            let mistakes = [];
+            stage.switches.forEach(s => {
+                const el = document.getElementById(`switch-${s.id}`);
+                if(el && el.checked !== s.targetState) {
+                    mistakes.push(`未${s.targetState ? '開啟' : '關閉'}「${s.label}」：將導致${s.desc}。`);
+                }
+            });
+            if(mistakes.length === 0) showAlert('操作完成！', '您正確處理了管線與開關，確保了安全。', 'safe', nextStage);
+            else applyPenalty(mistakes.length * 10, `開關狀態設定錯誤：<br><br><div class="text-left text-base space-y-3 bg-black/50 p-4 rounded border border-red-900">${mistakes.join('<br>')}</div>`, nextStage);
+        };
+
+        window.handleMCQ = function(isCorrect, reason) {
+            if(isCorrect) showAlert('應變正確！', reason, 'safe', nextStage);
+            else applyPenalty(15, reason, nextStage);
+        };
+        
+        window.handleBuildingClick = function(type, msg) {
+            if(type === 'safe') showAlert('掩蔽成功！', msg, 'safe', nextStage);
+            else applyPenalty(15, msg, nextStage);
+        };
+
+        window.handleSequence = function(el, id, total) {
+            if(state.seqArr.includes(id)) return;
+            state.seqArr.push(id); el.classList.add('selected'); el.querySelector('.seq-num').innerText = state.seqArr.length;
+            if(state.seqArr.length === total) {
+                let isCorrect = state.seqArr.every((val, index) => val === index + 1);
+                if(isCorrect) showAlert('處置成功！', '順序完全正確。您成功阻止了危機擴大。', 'safe', nextStage);
+                else applyPenalty(15, '順序錯誤！<br>在緊急狀態中，錯誤的步驟將導致致命後果。請重新操作。', resetSequence);
+            }
+        };
+        
+        window.resetSequence = function() {
+            state.seqArr = [];
+            document.querySelectorAll('.seq-row').forEach(el => { el.classList.remove('selected'); const b = el.querySelector('.seq-num'); b.innerText = '?'; b.style.background = '#111'; b.style.borderColor = '#666'; b.style.color = '#fff'; });
+        };
+
+        window.handleSeal = function(el, required) {
+            if(el.classList.contains('sealed')) return;
+            el.classList.add('sealed'); 
+            const label = el.querySelector('.seal-label');
+            if(label) label.style.display = 'none'; // hide label when found
+
+            state.sealedSpots++; document.getElementById('seal-count').innerText = state.sealedSpots;
+            if(state.sealedSpots === required) {
+                setTimeout(() => showAlert('目標達成！', '您已成功完成本區塊的尋找與封鎖任務。', 'safe', nextStage), 400);
+            }
+        };
+
+        window.handleCPRClick = function(target) {
+            state.cprCount++;
+            document.getElementById('click-count').innerText = state.cprCount;
+            
+            // UI Scale feedback
+            const btn = document.getElementById('cpr-btn');
+            btn.classList.add('scale-90');
+            setTimeout(() => btn.classList.remove('scale-90'), 50);
+
+            if(state.cprCount >= target) {
+                showAlert('急救成功！', '您完成了標準的 30 次胸外按壓，成功維持了傷患的血液循環。', 'safe', nextStage);
+            }
+        };
+
+        window.handleTuning = function(val, target) {
+            const display = document.getElementById('freq-display');
+            const msg = document.getElementById('radio-msg');
+            const btn = document.getElementById('btn-radio-next');
+            display.innerText = parseFloat(val).toFixed(1);
+            
+            const diff = Math.abs(val - target);
+            if(diff < 0.2) {
+                display.style.color = 'var(--rescue-orange)'; display.style.textShadow = '0 0 15px var(--rescue-orange)';
+                msg.innerHTML = '<span class="text-[var(--rescue-orange)] font-black">【警廣通報】請民眾維持冷靜，待在原地等待指示...</span>';
+                btn.classList.remove('hidden');
+                setStaticVol(0.01); 
+            } else {
+                display.style.color = 'var(--safe-green)'; display.style.textShadow = '0 0 10px rgba(16,185,129,0.5)';
+                msg.innerHTML = '...沙沙雜訊...';
+                btn.classList.add('hidden');
+                let vol = Math.min(0.2, Math.max(0.05, diff * 0.05));
+                setStaticVol(vol);
+            }
+        };
+
+        window.verifyValueSlider = function() {
+            const stage = campaign[state.idx];
+            const inputEl = document.getElementById('value-slider-input');
+            if(!inputEl) return;
+            const val = parseInt(inputEl.value);
+            
+            if(val >= stage.targetMin && val <= stage.targetMax) {
+                showAlert('設定正確！', stage.successMsg, 'safe', nextStage);
+            } else if (val < stage.targetMin) {
+                applyPenalty(15, stage.lowMsg, nextStage);
+            } else {
+                applyPenalty(15, stage.highMsg, nextStage);
+            }
+        };
+
+        // Initialize App
+        window.onload = renderStage;
+
+    </script>
+</body>
+</html>
